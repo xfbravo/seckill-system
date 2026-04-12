@@ -1,0 +1,41 @@
+# Build directories
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake*
+CMakeFiles/
+
+# Compiled files
+*.o
+*.obj
+*.exe
+*.a
+*.so
+*.dylib
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.vs/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Qt specific
+*.pro.user
+*.autosave
+
+# Secrets
+*.pem
+*.key
+seckill_server

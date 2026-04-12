@@ -1,0 +1,27 @@
+# Drogon 配置文件
+# 高并发秒杀系统
+
+app:
+  port: 8080
+  static_file_root: "./public"
+  timeout: 30000
+
+# 数据库配置 - 你的 Windows MySQL 服务器
+database:
+  host: "10.195.242.150"   # MySQL 服务器 IP
+  port: 3306
+  database: "seckill_db"
+  username: "root"          # 数据库用户名
+  password: "Dengni0425@xf"  # 数据库密码
+  pool_size: 10
+
+# Redis 配置 - 本机安装用 127.0.0.1
+redis:
+  host: "127.0.0.1"    # Redis服务器IP
+  port: 6379
+  db: 0
+  pool_size: 10
+
+log:
+  level: "INFO"
+  path: "./logs"
