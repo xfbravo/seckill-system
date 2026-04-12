@@ -24,18 +24,6 @@ void NetworkManager::setServerUrl(const QString& url)
     m_serverUrl = url;
 }
 
-QString NetworkManager::getOrCreateUserId()
-{
-    QSettings settings("SeckillApp", "Client");
-    QString userId = settings.value("userId").toString();
-    if (userId.isEmpty()) {
-        userId = QUuid::createUuid().toString();
-        settings.setValue("userId", userId);
-        qDebug() << "Generated new userId:" << userId;
-    }
-    return userId;
-}
-
 void NetworkManager::setUserId(int userId)
 {
     QSettings settings("SeckillApp", "Client");
@@ -221,7 +209,8 @@ void NetworkManager::onPostFinished()
     if (path.contains("/api/seckill/order")) {
         emit orderCreated(json["data"].toObject());
     } else if (path.contains("/api/user/login")) {
-        int userId = json["data"]["id"].toInt();
+        QJsonObject dataObj = json["data"].toObject();
+        int userId = dataObj["id"].toInt();
         emit loginSuccess(userId);
     }
 }
