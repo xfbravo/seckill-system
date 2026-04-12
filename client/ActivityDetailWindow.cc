@@ -177,7 +177,7 @@ void ActivityDetailWindow::onBuyClicked()
     }
 
     int activityId = m_activity["id"].toInt();
-    int userId = 1; // TODO: 从登录模块获取
+    int userId = NetworkManager::instance().getUserId();
     int quantity = m_quantitySpinBox->value();
 
     m_buyBtn->setEnabled(false);

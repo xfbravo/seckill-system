@@ -7,6 +7,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QSettings>
+#include <QUuid>
 
 class NetworkManager : public QObject
 {
@@ -23,6 +25,10 @@ public:
     void createSeckillOrder(int activityId, int userId, int quantity = 1);
     void getOrder(int orderId);
     void getOrderStatus(int orderId);
+
+    // User identification
+    QString getOrCreateUserId();
+    int getUserId();
 
     // Server configuration
     void setServerUrl(const QString& url);

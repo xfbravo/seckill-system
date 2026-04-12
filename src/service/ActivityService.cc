@@ -192,17 +192,23 @@ Result::Ptr ActivityService::getCountdown(long long id)
         std::time_t endTime = std::mktime(&endTm);
 
         int64_t countdown = 0;
-        if (now < startTime) {
-            countdown = startTime - now;
-        } else if (now < endTime) {
+        int computedStatus = 0; // 0=未开始, 1=进行中, 2=已结束
+        if (now >= endTime) {
+            countdown = 0;
+            computedStatus = 2; // 已结束
+        } else if (now >= startTime) {
             countdown = endTime - now;
+            computedStatus = 1; // 进行中
+        } else {
+            countdown = startTime - now;
+            computedStatus = 0; // 未开始
         }
 
         Json::Value data;
         data["countdown"] = (int64_t)countdown;
         data["start_time"] = activity->getStartTime();
         data["end_time"] = activity->getEndTime();
-        data["status"] = activity->getStatus();
+        data["status"] = computedStatus;
 
         return Result::success(data);
 

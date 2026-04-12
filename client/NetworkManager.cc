@@ -24,6 +24,27 @@ void NetworkManager::setServerUrl(const QString& url)
     m_serverUrl = url;
 }
 
+QString NetworkManager::getOrCreateUserId()
+{
+    QSettings settings("SeckillApp", "Client");
+    QString userId = settings.value("userId").toString();
+    if (userId.isEmpty()) {
+        userId = QUuid::createUuid().toString();
+        settings.setValue("userId", userId);
+        qDebug() << "Generated new userId:" << userId;
+    }
+    return userId;
+}
+
+int NetworkManager::getUserId()
+{
+    QString userIdStr = getOrCreateUserId();
+    // Convert UUID string to a numeric hash, then take modulo to get a reasonable user ID
+    uint hash = qHash(userIdStr);
+    int userId = (hash % 1000000) + 1; // Range: 1-1000000
+    return userId;
+}
+
 void NetworkManager::get(const QString& path)
 {
     if (m_currentReply) {
