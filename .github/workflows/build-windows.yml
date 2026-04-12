@@ -30,32 +30,22 @@ jobs:
           arch: "win64_mingw"
           install-deps: true
 
-      - name: Setup Qt
+      - name: Build with CMake
         shell: bash
+        env:
+          Qt6_DIR: ${{ env.Qt6_DIR }}
         run: |
-          echo "QTDIR=C:/Qt/6.5.0/mingw_64" >> $GITHUB_ENV
-          echo "PATH=C:/Qt/6.5.0/mingw_64/bin;$PATH" >> $GITHUB_ENV
-
-      - name: qmake
-        shell: bash
-        run: |
-          cd client
-          C:/Qt/6.5.0/mingw_64/bin/qmake -o Makefile seckill_client.pro
-
-      - name: Build
-        shell: bash
-        run: |
-          cd client
+          mkdir -p client/build
+          cd client/build
+          cmake -G "MinGW Makefiles" ..
           mingw32-make -j$(nproc)
 
       - name: Deploy
         shell: bash
         run: |
           mkdir -p dist
-          cp client/release/seckill_client.exe dist/
-
-          # Deploy Qt DLLs
-          C:/Qt/6.5.0/mingw_64/bin/windeployqt dist/seckill_client.exe --no-translations
+          cp client/build/seckill_client.exe dist/
+          windeployqt dist/seckill_client.exe --no-translations
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
