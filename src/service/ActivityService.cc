@@ -83,7 +83,10 @@ Result::Ptr ActivityService::getActivityList()
 
         Json::Value data;
         for (const auto& activity : activities) {
-            data.append(activity->toJson());
+            Json::Value json = activity->toJson();
+            // 动态计算状态
+            json["status"] = computeStatus(activity->getStartTime(), activity->getEndTime());
+            data.append(json);
         }
 
         return Result::success(data);
@@ -102,7 +105,9 @@ Result::Ptr ActivityService::getActivity(long long id)
             return Result::fail(ErrorCode::ERR_ACTIVITY_NOT_FOUND, "Activity not found");
         }
 
-        return Result::success(activity->toJson());
+        Json::Value json = activity->toJson();
+        json["status"] = computeStatus(activity->getStartTime(), activity->getEndTime());
+        return Result::success(json);
 
     } catch (const std::exception& e) {
         std::cerr << "getActivity exception: " << e.what() << std::endl;
@@ -216,6 +221,27 @@ Result::Ptr ActivityService::getCountdown(long long id)
         std::cerr << "getCountdown exception: " << e.what() << std::endl;
         return Result::fail(ErrorCode::ERR_INTERNAL, e.what());
     }
+}
+
+int ActivityService::computeStatus(const std::string& startTime, const std::string& endTime) const
+{
+    std::time_t now = std::time(nullptr);
+    std::tm startTm = {}, endTm = {};
+
+    std::istringstream startSs(startTime);
+    startSs >> std::get_time(&startTm, "%Y-%m-%d %H:%M:%S");
+    std::istringstream endSs(endTime);
+    endSs >> std::get_time(&endTm, "%Y-%m-%d %H:%M:%S");
+
+    std::time_t start = std::mktime(&startTm);
+    std::time_t end = std::mktime(&endTm);
+
+    if (now >= end) {
+        return Activity::ENDED;
+    } else if (now >= start) {
+        return Activity::ACTIVE;
+    }
+    return Activity::NOT_START;
 }
 
 } // namespace seckill

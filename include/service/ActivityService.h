@@ -38,6 +38,8 @@ public:
 private:
     struct Impl;
     Impl* pImpl_;
+
+    int computeStatus(const std::string& startTime, const std::string& endTime) const;
 };
 
 } // namespace seckill
