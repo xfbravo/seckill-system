@@ -16,22 +16,15 @@ int main(int argc, char *argv[])
     // Set network proxy to use system settings
     QNetworkProxyFactory::setUseSystemConfiguration(true);
 
-    // Check if user is already logged in
+    // Always show login window
     QSettings settings("SeckillApp", "Client");
-    QString savedUserId = settings.value("userId").toString();
-
-    // Show login window if no saved user
     int userId = 0;
-    if (savedUserId.isEmpty()) {
-        LoginWindow login;
-        if (login.exec() == QDialog::Accepted) {
-            userId = login.getUserId();
-            settings.setValue("userId", QString::number(userId));
-        } else {
-            return 0;
-        }
+    LoginWindow login;
+    if (login.exec() == QDialog::Accepted) {
+        userId = login.getUserId();
+        settings.setValue("userId", QString::number(userId));
     } else {
-        userId = savedUserId.toInt();
+        return 0;
     }
 
     MainWindow w;
