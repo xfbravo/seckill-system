@@ -28,7 +28,9 @@ void NetworkManager::get(const QString& path)
 {
     if (m_currentReply) {
         m_currentReply->abort();
+        disconnect(m_currentReply, &QNetworkReply::finished, this, &NetworkManager::onGetFinished);
         m_currentReply->deleteLater();
+        m_currentReply = nullptr;
     }
 
     QUrl url(m_serverUrl + path);
@@ -44,7 +46,9 @@ void NetworkManager::post(const QString& path, const QJsonObject& body)
 {
     if (m_currentReply) {
         m_currentReply->abort();
+        disconnect(m_currentReply, &QNetworkReply::finished, this, &NetworkManager::onPostFinished);
         m_currentReply->deleteLater();
+        m_currentReply = nullptr;
     }
 
     QUrl url(m_serverUrl + path);
@@ -100,6 +104,11 @@ void NetworkManager::onGetFinished()
 {
     if (!m_currentReply) return;
 
+    // Ignore OperationCanceledError - this happens when we abort a request to start a new one
+    if (m_currentReply->error() == QNetworkReply::OperationCanceledError) {
+        return;
+    }
+
     if (m_currentReply->error() != QNetworkReply::NoError) {
         emit errorOccurred(m_currentReply->errorString());
         return;
@@ -139,6 +148,11 @@ void NetworkManager::onGetFinished()
 void NetworkManager::onPostFinished()
 {
     if (!m_currentReply) return;
+
+    // Ignore OperationCanceledError - this happens when we abort a request to start a new one
+    if (m_currentReply->error() == QNetworkReply::OperationCanceledError) {
+        return;
+    }
 
     if (m_currentReply->error() != QNetworkReply::NoError) {
         emit errorOccurred(m_currentReply->errorString());
