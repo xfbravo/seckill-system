@@ -4,6 +4,7 @@
  */
 
 #include "http_server.h"
+#include "service/OrderWorker.h"
 #include "common/Config.h"
 #include <iostream>
 #include <thread>
@@ -23,9 +24,16 @@ int main()
     std::cout << "Redis: " << cfg.redisHost() << ":" << cfg.redisPort() << std::endl;
     std::cout << "========================================" << std::endl;
 
+    // 启动订单处理Worker（后台异步消费Redis队列）
+    seckill::OrderWorker::Ptr orderWorker = std::make_shared<seckill::OrderWorker>();
+    orderWorker->start();
+
     // 创建并启动 HTTP 服务器
     seckill::HttpServer server(cfg.appPort());
     server.start();
+
+    // 停止Worker
+    orderWorker->stop();
 
     return 0;
 }
