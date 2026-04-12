@@ -86,6 +86,11 @@ Result::Ptr ActivityService::getActivityList()
             Json::Value json = activity->toJson();
             // 动态计算状态
             json["status"] = computeStatus(activity->getStartTime(), activity->getEndTime());
+            // 获取实时库存（从Redis）
+            int realStock = pImpl_->stockRepo->getStock(activity->getId());
+            if (realStock >= 0) {
+                json["remain_stock"] = realStock;
+            }
             data.append(json);
         }
 
