@@ -121,6 +121,21 @@ void NetworkManager::getOrderStatus(int orderId)
     get(QString("/api/order/status/%1").arg(orderId));
 }
 
+void NetworkManager::login(int userId)
+{
+    QJsonObject body;
+    body["user_id"] = userId;
+    post("/api/user/login", body);
+}
+
+bool NetworkManager::loginOrCreate(int userId)
+{
+    // Simplified: just set the user ID locally without API call
+    QSettings settings("SeckillApp", "Client");
+    settings.setValue("userId", QString::number(userId));
+    return true;
+}
+
 void NetworkManager::onGetFinished()
 {
     if (!m_currentReply) return;

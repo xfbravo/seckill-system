@@ -95,6 +95,7 @@ Result::Ptr SeckillService::executeSeckill(long long activityId, long long userI
         orderJson["user_id"] = (int64_t)userId;
         orderJson["quantity"] = quantity;
         orderJson["status"] = 0;
+        orderJson["remain_stock"] = decreaseResult->data()["remain_stock"]; // 扣减后的库存
 
         // 6. 写入订单队列
         Json::StreamWriterBuilder builder;

@@ -30,6 +30,10 @@ public:
     QString getOrCreateUserId();
     int getUserId();
 
+    // User login
+    void login(int userId);
+    bool loginOrCreate(int userId);
+
     // Server configuration
     void setServerUrl(const QString& url);
 
@@ -42,6 +46,8 @@ signals:
     void orderReceived(const QJsonObject& order);
     void orderStatusReceived(const QString& status, const QString& statusText);
     void errorOccurred(const QString& error);
+    void loginSuccess(int userId);
+    void loginFailed(const QString& error);
 
 private:
     explicit NetworkManager(QObject *parent = nullptr);

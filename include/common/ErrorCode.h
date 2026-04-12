@@ -43,6 +43,9 @@ public:
         // 库存相关错误 (4xxx)
         ERR_STOCK_NOT_ENOUGH = 4001,     // 库存不足
         ERR_STOCK_INIT_FAIL = 4002,      // 库存初始化失败
+
+        // 用户相关错误 (5xxx)
+        ERR_USER_NOT_FOUND = 5001,       // 用户不存在
     };
 
     // 获取错误码对应的消息
@@ -62,6 +65,7 @@ public:
             {ERR_ORDER_STATUS_INVALID, "Invalid order status"},
             {ERR_STOCK_NOT_ENOUGH, "Stock not enough"},
             {ERR_STOCK_INIT_FAIL, "Failed to initialize stock"},
+            {ERR_USER_NOT_FOUND, "User not found"},
         };
 
         auto it = messages.find(code);

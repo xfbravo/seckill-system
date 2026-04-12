@@ -44,6 +44,9 @@ private:
     void handleListOrders(const httplib::Request& req, httplib::Response& res);
     void handleGetOrderStatus(const httplib::Request& req, httplib::Response& res);
 
+    // 用户接口处理
+    void handleUserLogin(const httplib::Request& req, httplib::Response& res);
+
     int port_;
     std::shared_ptr<httplib::Server> svr_;
 };

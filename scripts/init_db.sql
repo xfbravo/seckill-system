@@ -37,6 +37,12 @@ CREATE TABLE IF NOT EXISTS seckill_order (
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='秒杀订单表';
 
+-- 用户表
+CREATE TABLE IF NOT EXISTS seckill_user (
+    id BIGINT PRIMARY KEY COMMENT '用户ID',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
+
 -- 插入测试数据
 INSERT INTO seckill_activity (name, total_stock, remain_stock, price, start_time, end_time, status) VALUES
 ('iPhone 15 秒杀', 100, 100, 5999.00, '2026-04-15 10:00:00', '2026-04-15 12:00:00', 0),

@@ -7,6 +7,7 @@
 #include "service/ActivityService.h"
 #include "service/SeckillService.h"
 #include "service/OrderService.h"
+#include "service/UserService.h"
 #include <iostream>
 #include <json/json.h>
 
@@ -67,6 +68,11 @@ void HttpServer::setupRoutes()
 
     svr_->Get(R"(/api/order/status/(\d+))", [this](const Request& req, Response& res) {
         handleGetOrderStatus(req, res);
+    });
+
+    // 用户接口
+    svr_->Post("/api/user/login", [this](const Request& req, Response& res) {
+        handleUserLogin(req, res);
     });
 
     std::cout << "Routes registered successfully" << std::endl;
@@ -319,6 +325,54 @@ void HttpServer::handleGetOrderStatus(const Request& req, Response& res)
             json["code"] = result->code();
             json["message"] = result->message();
         }
+
+    } catch (const std::exception& e) {
+        json["code"] = -1;
+        json["message"] = e.what();
+    }
+
+    res.set_content(json.toStyledString(), "application/json");
+}
+
+void HttpServer::handleUserLogin(const Request& req, Response& res)
+{
+    Json::Value json;
+
+    try {
+        std::string body = req.body;
+        if (body.empty()) {
+            json["code"] = -1;
+            json["message"] = "Empty request body";
+            res.set_content(json.toStyledString(), "application/json");
+            return;
+        }
+
+        Json::Value requestJson;
+        std::istringstream stream(body);
+        Json::CharReaderBuilder builder;
+        std::string errs;
+        if (!Json::parseFromStream(builder, stream, &requestJson, &errs)) {
+            json["code"] = -1;
+            json["message"] = "Invalid JSON";
+            res.set_content(json.toStyledString(), "application/json");
+            return;
+        }
+
+        if (!requestJson.isMember("user_id")) {
+            json["code"] = -1;
+            json["message"] = "Missing required parameter: user_id";
+            res.set_content(json.toStyledString(), "application/json");
+            return;
+        }
+
+        long long userId = requestJson["user_id"].asInt64();
+
+        static UserService::Ptr service = std::make_shared<UserService>();
+        auto result = service->loginOrCreate(userId);
+
+        json["code"] = result->code();
+        json["message"] = result->message();
+        json["data"] = result->data();
 
     } catch (const std::exception& e) {
         json["code"] = -1;

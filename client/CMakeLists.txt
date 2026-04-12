@@ -15,12 +15,14 @@ set(SOURCES
     MainWindow.cc
     ActivityDetailWindow.cc
     NetworkManager.cc
+    LoginWindow.cc
 )
 
 set(HEADERS
     MainWindow.h
     ActivityDetailWindow.h
     NetworkManager.h
+    LoginWindow.h
 )
 
 add_executable(seckill_client WIN32
