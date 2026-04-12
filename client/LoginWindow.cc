@@ -33,6 +33,10 @@ LoginWindow::LoginWindow(QWidget *parent)
 
     connect(m_loginBtn, &QPushButton::clicked, this, &LoginWindow::onLoginClicked);
     connect(m_userIdInput, &QLineEdit::returnPressed, this, &LoginWindow::onLoginClicked);
+
+    // Connect to NetworkManager signals
+    connect(&NetworkManager::instance(), &NetworkManager::loginSuccess, this, &LoginWindow::onLoginSuccess);
+    connect(&NetworkManager::instance(), &NetworkManager::loginFailed, this, &LoginWindow::onLoginFailed);
 }
 
 LoginWindow::~LoginWindow()
@@ -64,12 +68,23 @@ void LoginWindow::performLogin()
     m_statusLabel->setText("正在登录...");
     m_statusLabel->setStyleSheet("color: blue;");
 
-    // 直接使用API登录
-    // 这里简化处理：假设登录成功
-    // 实际项目中应该调用API验证
+    // 调用API登录
+    NetworkManager::instance().login(m_userId);
+}
+
+void LoginWindow::onLoginSuccess(int userId)
+{
+    Q_UNUSED(userId);
     m_loggedIn = true;
     m_statusLabel->setText("登录成功！");
     m_statusLabel->setStyleSheet("color: green;");
-
     accept();
+}
+
+void LoginWindow::onLoginFailed(const QString& error)
+{
+    Q_UNUSED(error);
+    m_loginBtn->setEnabled(true);
+    m_statusLabel->setText("登录失败，请重试");
+    m_statusLabel->setStyleSheet("color: red;");
 }

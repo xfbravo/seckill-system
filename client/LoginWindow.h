@@ -19,6 +19,8 @@ public:
 
 private slots:
     void onLoginClicked();
+    void onLoginSuccess(int userId);
+    void onLoginFailed(const QString& error);
 
 private:
     void performLogin();

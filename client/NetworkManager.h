@@ -27,7 +27,7 @@ public:
     void getOrderStatus(int orderId);
 
     // User identification
-    QString getOrCreateUserId();
+    void setUserId(int userId);
     int getUserId();
 
     // User login

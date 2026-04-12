@@ -36,13 +36,20 @@ QString NetworkManager::getOrCreateUserId()
     return userId;
 }
 
+void NetworkManager::setUserId(int userId)
+{
+    QSettings settings("SeckillApp", "Client");
+    settings.setValue("userId", QString::number(userId));
+}
+
 int NetworkManager::getUserId()
 {
-    QString userIdStr = getOrCreateUserId();
-    // Convert UUID string to a numeric hash, then take modulo to get a reasonable user ID
-    uint hash = qHash(userIdStr);
-    int userId = (hash % 1000000) + 1; // Range: 1-1000000
-    return userId;
+    QSettings settings("SeckillApp", "Client");
+    QString userIdStr = settings.value("userId").toString();
+    if (userIdStr.isEmpty()) {
+        return 0;
+    }
+    return userIdStr.toInt();
 }
 
 void NetworkManager::get(const QString& path)
@@ -200,14 +207,21 @@ void NetworkManager::onPostFinished()
     QJsonObject json = doc.object();
 
     int code = json["code"].toInt();
+    QString path = m_currentReply->url().path();
+
     if (code != 0) {
-        emit errorOccurred(json["message"].toString());
+        if (path.contains("/api/user/login")) {
+            emit loginFailed(json["message"].toString());
+        } else {
+            emit errorOccurred(json["message"].toString());
+        }
         return;
     }
 
-    QString path = m_currentReply->url().path();
-
     if (path.contains("/api/seckill/order")) {
         emit orderCreated(json["data"].toObject());
+    } else if (path.contains("/api/user/login")) {
+        int userId = json["data"]["id"].toInt();
+        emit loginSuccess(userId);
     }
 }

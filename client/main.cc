@@ -4,6 +4,7 @@
 #include <QSettings>
 #include "MainWindow.h"
 #include "LoginWindow.h"
+#include "NetworkManager.h"
 
 int main(int argc, char *argv[])
 {
@@ -23,6 +24,7 @@ int main(int argc, char *argv[])
     if (login.exec() == QDialog::Accepted) {
         userId = login.getUserId();
         settings.setValue("userId", QString::number(userId));
+        NetworkManager::instance().setUserId(userId);
     } else {
         return 0;
     }
