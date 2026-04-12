@@ -120,7 +120,8 @@ void NetworkManager::onGetFinished()
     if (path.contains("/api/activity/list")) {
         emit activityListReceived(json["data"].toArray());
     } else if (path.contains("/api/activity/") && path.contains("/stock")) {
-        emit stockReceived(json["data"]["remain_stock"].toInt());
+        QJsonObject dataObj = json["data"].toObject();
+        emit stockReceived(dataObj["remain_stock"].toInt());
     } else if (path.contains("/api/seckill/countdown")) {
         QJsonObject dataObj = json["data"].toObject();
         emit countdownReceived(dataObj["countdown"].toInt(), dataObj["status"].toString());

@@ -26,6 +26,7 @@ private slots:
     void onErrorOccurred(const QString& error);
 
 private:
+    void setupUi();
     void updateCountdownDisplay();
     void updateStockDisplay();
 
