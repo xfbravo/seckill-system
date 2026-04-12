@@ -2,13 +2,13 @@ name: Build Windows Executable
 
 on:
   push:
-    branches: [ main ]
+    branches: [master]
     paths:
-      - 'client/**'
+      - "client/**"
   pull_request:
-    branches: [ main ]
+    branches: [master]
     paths:
-      - 'client/**'
+      - "client/**"
   release:
     types: [created]
 
@@ -23,10 +23,10 @@ jobs:
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.5.0'
-          host: 'windows'
-          target: 'desktop'
-          arch: 'win64_mingw'
+          version: "6.5.0"
+          host: "windows"
+          target: "desktop"
+          arch: "win64_mingw"
           install-deps: true
 
       - name: Setup Qt
