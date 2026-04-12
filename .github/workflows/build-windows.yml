@@ -9,6 +9,7 @@ on:
     branches: [master]
     paths:
       - "client/**"
+  workflow_dispatch:
   release:
     types: [created]
 
