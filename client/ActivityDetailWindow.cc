@@ -159,8 +159,8 @@ void ActivityDetailWindow::updateCountdownDisplay()
         m_buyBtn->setEnabled(false);
         m_buyBtn->setText("已结束");
         m_countdownTimer->stop();
-    } else if (m_countdown <= 0) {
-        // Activity active (status=1) and countdown reached 0
+    } else if (m_status == "1") {
+        // Activity is active
         m_countdownLabel->setText("进行中");
         m_countdownLabel->setStyleSheet("font-size: 36px; font-weight: bold; color: #27ae60;");
         if (m_remainStock > 0) {
@@ -171,7 +171,7 @@ void ActivityDetailWindow::updateCountdownDisplay()
             m_buyBtn->setText("已售罄");
         }
     } else {
-        // Countdown before start
+        // Activity not started yet - show countdown to start
         int hours = m_countdown / 3600;
         int minutes = (m_countdown % 3600) / 60;
         int seconds = m_countdown % 60;
@@ -179,6 +179,7 @@ void ActivityDetailWindow::updateCountdownDisplay()
                                    .arg(hours, 2, 10, QChar('0'))
                                    .arg(minutes, 2, 10, QChar('0'))
                                    .arg(seconds, 2, 10, QChar('0')));
+        m_countdownLabel->setStyleSheet("font-size: 36px; font-weight: bold; color: #3498db;");
         m_buyBtn->setEnabled(false);
         m_buyBtn->setText("等待开始");
     }
@@ -206,7 +207,7 @@ void ActivityDetailWindow::onBuyClicked()
         return;
     }
 
-    if (m_countdown > 0) {
+    if (m_status == "0") {
         QMessageBox::warning(this, "提示", "活动尚未开始，请等待倒计时结束！");
         m_buyBtn->setText("等待开始");
         return;
