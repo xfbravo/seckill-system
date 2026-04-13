@@ -117,6 +117,7 @@ void ActivityDetailWindow::setupUi()
 
 void ActivityDetailWindow::onCountdownReceived(int countdown, const QString& status)
 {
+    qDebug() << "onCountdownReceived:" << countdown << "status:" << status;
     m_countdown = countdown;
     m_status = status;
     updateCountdownDisplay();
@@ -154,10 +155,16 @@ void ActivityDetailWindow::updateCountdownDisplay()
         m_buyBtn->setText("已结束");
         m_countdownTimer->stop();
     } else if (m_countdown <= 0) {
-        // Activity active, countdown reached 0
+        // Activity active (status=1) and countdown reached 0
         m_countdownLabel->setText("进行中");
         m_countdownLabel->setStyleSheet("font-size: 36px; font-weight: bold; color: #27ae60;");
-        m_buyBtn->setEnabled(m_remainStock > 0);
+        if (m_remainStock > 0) {
+            m_buyBtn->setEnabled(true);
+            m_buyBtn->setText("立即抢购");
+        } else {
+            m_buyBtn->setEnabled(false);
+            m_buyBtn->setText("已售罄");
+        }
     } else {
         // Countdown before start
         int hours = m_countdown / 3600;
@@ -184,6 +191,14 @@ void ActivityDetailWindow::updateStockDisplay()
 
 void ActivityDetailWindow::onBuyClicked()
 {
+    // Double-check status before purchase
+    if (m_status == "2") {
+        QMessageBox::warning(this, "提示", "活动已结束！");
+        m_buyBtn->setEnabled(false);
+        m_buyBtn->setText("已结束");
+        return;
+    }
+
     if (m_countdown > 0) {
         QMessageBox::warning(this, "提示", "活动尚未开始，请等待倒计时结束！");
         return;
@@ -191,6 +206,8 @@ void ActivityDetailWindow::onBuyClicked()
 
     if (m_remainStock <= 0) {
         QMessageBox::warning(this, "提示", "库存不足，已售罄！");
+        m_buyBtn->setEnabled(false);
+        m_buyBtn->setText("已售罄");
         return;
     }
 

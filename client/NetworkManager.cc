@@ -42,11 +42,9 @@ int NetworkManager::getUserId()
 
 void NetworkManager::get(const QString& path)
 {
-    if (m_currentReply) {
+    // Abort previous GET request if pending
+    if (m_currentReply && m_currentReply->isRunning()) {
         m_currentReply->abort();
-        disconnect(m_currentReply, &QNetworkReply::finished, this, &NetworkManager::onGetFinished);
-        m_currentReply->deleteLater();
-        m_currentReply = nullptr;
     }
 
     QUrl url(m_serverUrl + path);
@@ -133,19 +131,20 @@ bool NetworkManager::loginOrCreate(int userId)
 
 void NetworkManager::onGetFinished()
 {
-    if (!m_currentReply) return;
+    QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
+    if (!reply) return;
 
     // Ignore OperationCanceledError - this happens when we abort a request to start a new one
-    if (m_currentReply->error() == QNetworkReply::OperationCanceledError) {
+    if (reply->error() == QNetworkReply::OperationCanceledError) {
         return;
     }
 
-    if (m_currentReply->error() != QNetworkReply::NoError) {
-        emit errorOccurred(m_currentReply->errorString());
+    if (reply->error() != QNetworkReply::NoError) {
+        emit errorOccurred(reply->errorString());
         return;
     }
 
-    QByteArray data = m_currentReply->readAll();
+    QByteArray data = reply->readAll();
     QJsonDocument doc = QJsonDocument::fromJson(data);
     QJsonObject json = doc.object();
 
@@ -155,7 +154,7 @@ void NetworkManager::onGetFinished()
         return;
     }
 
-    QString path = m_currentReply->url().path();
+    QString path = reply->url().path();
 
     if (path.contains("/api/activity/list")) {
         emit activityListReceived(json["data"].toArray());
@@ -178,24 +177,25 @@ void NetworkManager::onGetFinished()
 
 void NetworkManager::onPostFinished()
 {
-    if (!m_currentReply) return;
+    QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
+    if (!reply) return;
 
     // Ignore OperationCanceledError - this happens when we abort a request to start a new one
-    if (m_currentReply->error() == QNetworkReply::OperationCanceledError) {
+    if (reply->error() == QNetworkReply::OperationCanceledError) {
         return;
     }
 
-    if (m_currentReply->error() != QNetworkReply::NoError) {
-        emit errorOccurred(m_currentReply->errorString());
+    if (reply->error() != QNetworkReply::NoError) {
+        emit errorOccurred(reply->errorString());
         return;
     }
 
-    QByteArray data = m_currentReply->readAll();
+    QByteArray data = reply->readAll();
     QJsonDocument doc = QJsonDocument::fromJson(data);
     QJsonObject json = doc.object();
 
     int code = json["code"].toInt();
-    QString path = m_currentReply->url().path();
+    QString path = reply->url().path();
 
     if (code != 0) {
         if (path.contains("/api/user/login")) {
