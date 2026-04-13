@@ -24,6 +24,7 @@ ActivityDetailWindow::ActivityDetailWindow(const QJsonObject& activity, QWidget 
 
     setupUi();
 
+    qDebug() << "Connecting NetworkManager signals...";
     connect(&NetworkManager::instance(), &NetworkManager::countdownReceived,
             this, &ActivityDetailWindow::onCountdownReceived);
     connect(&NetworkManager::instance(), &NetworkManager::stockReceived,
@@ -40,7 +41,9 @@ ActivityDetailWindow::ActivityDetailWindow(const QJsonObject& activity, QWidget 
 
     // Load initial data
     int activityId = activity["id"].toInt();
+    qDebug() << "Fetching countdown for activity:" << activityId;
     NetworkManager::instance().getCountdown(activityId);
+    qDebug() << "Fetching stock for activity:" << activityId;
     NetworkManager::instance().getActivityStock(activityId);
 
     m_countdownTimer->start(1000); // Update every second
@@ -117,7 +120,7 @@ void ActivityDetailWindow::setupUi()
 
 void ActivityDetailWindow::onCountdownReceived(int countdown, const QString& status)
 {
-    qDebug() << "onCountdownReceived:" << countdown << "status:" << status;
+    qDebug() << "onCountdownReceived: countdown=" << countdown << "status=" << status;
     m_countdown = countdown;
     m_status = status;
     updateCountdownDisplay();
@@ -191,22 +194,24 @@ void ActivityDetailWindow::updateStockDisplay()
 
 void ActivityDetailWindow::onBuyClicked()
 {
+    // Immediately disable button to prevent multiple clicks
+    m_buyBtn->setEnabled(false);
+
     // Double-check status before purchase
     if (m_status == "2") {
         QMessageBox::warning(this, "提示", "活动已结束！");
-        m_buyBtn->setEnabled(false);
         m_buyBtn->setText("已结束");
         return;
     }
 
     if (m_countdown > 0) {
         QMessageBox::warning(this, "提示", "活动尚未开始，请等待倒计时结束！");
+        m_buyBtn->setText("等待开始");
         return;
     }
 
     if (m_remainStock <= 0) {
         QMessageBox::warning(this, "提示", "库存不足，已售罄！");
-        m_buyBtn->setEnabled(false);
         m_buyBtn->setText("已售罄");
         return;
     }
@@ -215,7 +220,6 @@ void ActivityDetailWindow::onBuyClicked()
     int userId = NetworkManager::instance().getUserId();
     int quantity = m_quantitySpinBox->value();
 
-    m_buyBtn->setEnabled(false);
     m_buyBtn->setText("抢购中...");
 
     NetworkManager::instance().createSeckillOrder(activityId, userId, quantity);
@@ -242,6 +246,7 @@ void ActivityDetailWindow::onOrderStatusReceived(const QString& status, const QS
 
 void ActivityDetailWindow::onErrorOccurred(const QString& error)
 {
+    qDebug() << "onErrorOccurred:" << error;
     QMessageBox::critical(this, "错误", error);
     m_buyBtn->setText("立即抢购");
     m_buyBtn->setEnabled(true);

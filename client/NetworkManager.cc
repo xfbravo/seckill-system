@@ -140,9 +140,12 @@ void NetworkManager::onGetFinished()
     }
 
     if (reply->error() != QNetworkReply::NoError) {
+        qDebug() << "Network error:" << reply->errorString();
         emit errorOccurred(reply->errorString());
         return;
     }
+
+    qDebug() << "onGetFinished success, url:" << reply->url().path();
 
     QByteArray data = reply->readAll();
     QJsonDocument doc = QJsonDocument::fromJson(data);
@@ -161,8 +164,10 @@ void NetworkManager::onGetFinished()
     } else if (path.contains("/api/activity/") && path.contains("/stock")) {
         QJsonObject dataObj = json["data"].toObject();
         emit stockReceived(dataObj["remain_stock"].toInt());
-    } else if (path.contains("/api/seckill/countdown")) {
+} else if (path.contains("/api/seckill/countdown")) {
+        qDebug() << "Countdown API matched, path:" << path;
         QJsonObject dataObj = json["data"].toObject();
+        qDebug() << "Emitting countdownReceived:" << dataObj["countdown"].toInt() << dataObj["status"].toString();
         emit countdownReceived(dataObj["countdown"].toInt(), dataObj["status"].toString());
     } else if (path.contains("/api/activity/")) {
         emit activityReceived(json["data"].toObject());
