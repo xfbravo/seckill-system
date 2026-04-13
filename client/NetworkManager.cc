@@ -42,18 +42,12 @@ int NetworkManager::getUserId()
 
 void NetworkManager::get(const QString& path)
 {
-    // Abort previous GET request if pending
-    if (m_currentReply && m_currentReply->isRunning()) {
-        m_currentReply->abort();
-    }
-
     QUrl url(m_serverUrl + path);
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
-    m_currentReply = m_nam->get(request);
-
-    connect(m_currentReply, &QNetworkReply::finished, this, &NetworkManager::onGetFinished);
+    QNetworkReply* reply = m_nam->get(request);
+    connect(reply, &QNetworkReply::finished, this, &NetworkManager::onGetFinished);
 }
 
 void NetworkManager::post(const QString& path, const QJsonObject& body)
