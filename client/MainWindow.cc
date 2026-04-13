@@ -114,6 +114,7 @@ void MainWindow::onActivityDoubleClicked(int row, int column)
     if (row >= 0 && row < m_activities.size()) {
         QJsonObject activity = m_activities[row].toObject();
         ActivityDetailWindow* detailWindow = new ActivityDetailWindow(activity, this);
+        detailWindow->setAttribute(Qt::WA_DeleteOnClose);
         detailWindow->show();
     }
 }
