@@ -10,6 +10,7 @@
 #include <QStackedWidget>
 #include <QWidget>
 #include <QJsonObject>
+#include <QSpinBox>
 
 class MainWindow : public QMainWindow
 {
@@ -50,6 +51,9 @@ private:
     QLabel* m_detailStockLabel;
     QLabel* m_detailCountdownLabel;
     QLabel* m_detailStatusLabel;
+    QLabel* m_detailStartTimeLabel;
+    QLabel* m_detailEndTimeLabel;
+    QLabel* m_detailTotalStockLabel;
     QPushButton* m_detailBuyBtn;
     QPushButton* m_backBtn;
     QSpinBox* m_detailQuantitySpinBox;

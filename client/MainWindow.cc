@@ -20,6 +20,18 @@ MainWindow::MainWindow(QWidget *parent)
     , m_refreshTimer(new QTimer(this))
     , m_detailCountdownTimer(new QTimer(this))
     , m_detailCountdown(0)
+    , m_detailNameLabel(nullptr)
+    , m_detailPriceLabel(nullptr)
+    , m_detailStockLabel(nullptr)
+    , m_detailCountdownLabel(nullptr)
+    , m_detailStatusLabel(nullptr)
+    , m_detailStartTimeLabel(nullptr)
+    , m_detailEndTimeLabel(nullptr)
+    , m_detailTotalStockLabel(nullptr)
+    , m_detailBuyBtn(nullptr)
+    , m_backBtn(nullptr)
+    , m_detailQuantitySpinBox(nullptr)
+    , m_currentActivityId(0)
 {
     setupUi();
 
@@ -176,14 +188,14 @@ void MainWindow::showActivityDetail(const QJsonObject& activity)
         QGroupBox* infoGroup = new QGroupBox("活动信息", m_detailWidget);
         QFormLayout* infoLayout = new QFormLayout(infoGroup);
         m_detailPriceLabel = new QLabel(infoGroup);
-        QLabel* startLabel = new QLabel(infoGroup);
-        QLabel* endLabel = new QLabel(infoGroup);
-        QLabel* totalLabel = new QLabel(infoGroup);
+        m_detailStartTimeLabel = new QLabel(infoGroup);
+        m_detailEndTimeLabel = new QLabel(infoGroup);
+        m_detailTotalStockLabel = new QLabel(infoGroup);
         m_detailStockLabel = new QLabel(infoGroup);
         infoLayout->addRow("秒杀价格:", m_detailPriceLabel);
-        infoLayout->addRow("开始时间:", startLabel);
-        infoLayout->addRow("结束时间:", endLabel);
-        infoLayout->addRow("总库存:", totalLabel);
+        infoLayout->addRow("开始时间:", m_detailStartTimeLabel);
+        infoLayout->addRow("结束时间:", m_detailEndTimeLabel);
+        infoLayout->addRow("总库存:", m_detailTotalStockLabel);
         infoLayout->addRow("剩余库存:", m_detailStockLabel);
         layout->addWidget(infoGroup);
 
@@ -238,21 +250,9 @@ void MainWindow::showActivityDetail(const QJsonObject& activity)
     // Update detail info
     m_detailNameLabel->setText(activity["name"].toString());
     m_detailPriceLabel->setText(QString("¥%1").arg(activity["price"].toDouble()));
-
-    // Get pointers to form labels
-    QGroupBox* infoGroup = qobject_cast<QGroupBox*>(m_detailWidget->layout()->itemAt(2)->widget();
-    if (infoGroup) {
-        QFormLayout* form = qobject_cast<QFormLayout*>(infoGroup->layout());
-        if (form) {
-            QLabel* startLabel = qobject_cast<QLabel*>(form->itemAt(1, QFormLayout::LabelRole)->widget());
-            QLabel* endLabel = qobject_cast<QLabel*>(form->itemAt(2, QFormLayout::LabelRole)->widget());
-            QLabel* totalLabel = qobject_cast<QLabel*>(form->itemAt(3, QFormLayout::LabelRole)->widget());
-            if (startLabel) startLabel->setText(activity["start_time"].toString());
-            if (endLabel) endLabel->setText(activity["end_time"].toString());
-            if (totalLabel) totalLabel->setText(QString::number(activity["total_stock"].toInt()));
-        }
-    }
-
+    m_detailStartTimeLabel->setText(activity["start_time"].toString());
+    m_detailEndTimeLabel->setText(activity["end_time"].toString());
+    m_detailTotalStockLabel->setText(QString::number(activity["total_stock"].toInt()));
     m_detailStockLabel->setText(QString::number(activity["remain_stock"].toInt()));
     m_detailCountdownLabel->setText("加载中...");
 
@@ -358,7 +358,7 @@ void MainWindow::onDetailCountdownTimerUpdate()
         updateDetailDisplay();
     } else if (m_detailStatus == "1") {
         // Activity is active, re-fetch countdown to check if it ends
-        NetworkManager::instance().getCountdown(m_currentActivity["id"].toInt());
+        NetworkManager::instance().getCountdown(m_currentActivityId);
     }
 }
 
