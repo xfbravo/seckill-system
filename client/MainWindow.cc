@@ -80,11 +80,29 @@ void MainWindow::onRefreshClicked()
 
 void MainWindow::onActivityListReceived(const QJsonArray& list)
 {
-    m_activities = list;
-    m_table->setRowCount(list.size());
-
+    // Filter: hide activities ended more than 1 hour ago
+    QJsonArray filteredList;
     for (int i = 0; i < list.size(); ++i) {
         QJsonObject activity = list[i].toObject();
+        int status = activity["status"].toInt();
+
+        if (status == 2) {
+            // Activity ended, check if more than 1 hour ago
+            QString endTimeStr = activity["end_time"].toString();
+            QDateTime endTime = QDateTime::fromString(endTimeStr, "yyyy-MM-dd HH:mm:ss");
+            QDateTime now = QDateTime::currentDateTime();
+            if (endTime.msecsTo(now) > 3600 * 1000) {
+                continue; // Skip this activity
+            }
+        }
+        filteredList.append(activity);
+    }
+
+    m_activities = filteredList;
+    m_table->setRowCount(filteredList.size());
+
+    for (int i = 0; i < filteredList.size(); ++i) {
+        QJsonObject activity = filteredList[i].toObject();
 
         m_table->setItem(i, 0, new QTableWidgetItem(QString::number(activity["id"].toInt())));
         m_table->setItem(i, 1, new QTableWidgetItem(activity["name"].toString()));
@@ -99,7 +117,7 @@ void MainWindow::onActivityListReceived(const QJsonArray& list)
     }
 
     m_statusLabel->setText(QString("共 %1 个活动，最后更新: %2")
-                           .arg(list.size())
+                           .arg(filteredList.size())
                            .arg(QTime::currentTime().toString("HH:mm:ss")));
 }
 
