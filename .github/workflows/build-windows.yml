@@ -5,10 +5,14 @@ on:
     branches: [master]
     paths:
       - "client/**"
+      - "src/**"
+      - "include/**"
   pull_request:
     branches: [master]
     paths:
       - "client/**"
+      - "src/**"
+      - "include/**"
   workflow_dispatch:
   release:
     types: [created]
