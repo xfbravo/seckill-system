@@ -127,7 +127,7 @@ void ActivityDetailWindow::onCountdownReceived(int countdown, const QString& sta
     m_status = status;
     updateCountdownDisplay();
 
-    // If activity is ended, stop the timer
+    // 如果活动结束，停止timer
     if (status == "2") {
         m_countdownTimer->stop();
     }
