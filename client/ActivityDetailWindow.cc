@@ -52,6 +52,8 @@ ActivityDetailWindow::ActivityDetailWindow(const QJsonObject& activity, QWidget 
 ActivityDetailWindow::~ActivityDetailWindow()
 {
     m_countdownTimer->stop();
+    // Disconnect all signals from NetworkManager to prevent callbacks to destroyed window
+    disconnect(&NetworkManager::instance(), nullptr, this, nullptr);
 }
 
 void ActivityDetailWindow::setupUi()
