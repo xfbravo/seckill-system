@@ -120,6 +120,11 @@ void ActivityDetailWindow::onCountdownReceived(int countdown, const QString& sta
     m_countdown = countdown;
     m_status = status;
     updateCountdownDisplay();
+
+    // If activity is ended, stop the timer
+    if (status == "2") {
+        m_countdownTimer->stop();
+    }
 }
 
 void ActivityDetailWindow::onStockReceived(int remainStock)
@@ -133,16 +138,28 @@ void ActivityDetailWindow::onCountdownTimerUpdate()
     if (m_countdown > 0) {
         m_countdown--;
         updateCountdownDisplay();
+    } else if (m_status == "1") {
+        // Activity is active, re-fetch countdown to check if it ends
+        NetworkManager::instance().getCountdown(m_activity["id"].toInt());
     }
 }
 
 void ActivityDetailWindow::updateCountdownDisplay()
 {
-    if (m_countdown <= 0) {
-        m_countdownLabel->setText("已开抢!");
+    if (m_status == "2") {
+        // Activity ended
+        m_countdownLabel->setText("活动已结束");
+        m_countdownLabel->setStyleSheet("font-size: 28px; font-weight: bold; color: #95a5a6;");
+        m_buyBtn->setEnabled(false);
+        m_buyBtn->setText("已结束");
+        m_countdownTimer->stop();
+    } else if (m_countdown <= 0) {
+        // Activity active, countdown reached 0
+        m_countdownLabel->setText("进行中");
         m_countdownLabel->setStyleSheet("font-size: 36px; font-weight: bold; color: #27ae60;");
-        m_buyBtn->setEnabled(true);
+        m_buyBtn->setEnabled(m_remainStock > 0);
     } else {
+        // Countdown before start
         int hours = m_countdown / 3600;
         int minutes = (m_countdown % 3600) / 60;
         int seconds = m_countdown % 60;
@@ -151,6 +168,7 @@ void ActivityDetailWindow::updateCountdownDisplay()
                                    .arg(minutes, 2, 10, QChar('0'))
                                    .arg(seconds, 2, 10, QChar('0')));
         m_buyBtn->setEnabled(false);
+        m_buyBtn->setText("等待开始");
     }
 }
 
