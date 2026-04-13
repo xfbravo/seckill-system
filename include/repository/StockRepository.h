@@ -13,6 +13,7 @@
 #include <memory>
 #include <string>
 #include <hiredis/hiredis.h>
+#include <mutex>
 
 namespace seckill
 {
@@ -51,6 +52,7 @@ public:
 private:
     // Redis 连接
     redisContext* redis_;
+    std::mutex redisMutex_;  // Protects Redis operations
 
     // Lua 脚本：扣减库存
     // 逻辑：如果库存 >= 购买数量，则扣减成功

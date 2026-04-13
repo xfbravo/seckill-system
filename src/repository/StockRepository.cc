@@ -13,6 +13,7 @@
 #include "common/Config.h"
 #include <iostream>
 #include <hiredis/hiredis.h>
+#include <mutex>
 
 namespace seckill
 {
@@ -63,8 +64,11 @@ bool StockRepository::initStock(long long activityId, int stock)
 
     std::string key = RedisKeys::stockKey(activityId);
 
-    // SET stock:{activity_id} {stock}
-    redisReply* reply = (redisReply*)redisCommand(redis_, "SET %s %d", key.c_str(), stock);
+    redisReply* reply = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(redisMutex_);
+        reply = (redisReply*)redisCommand(redis_, "SET %s %d", key.c_str(), stock);
+    }
     if (!reply) return false;
 
     freeReplyObject(reply);
@@ -82,7 +86,11 @@ int StockRepository::getStock(long long activityId)
 
     std::string key = RedisKeys::stockKey(activityId);
 
-    redisReply* reply = (redisReply*)redisCommand(redis_, "GET %s", key.c_str());
+    redisReply* reply = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(redisMutex_);
+        reply = (redisReply*)redisCommand(redis_, "GET %s", key.c_str());
+    }
     if (!reply) return -1;
 
     if (reply->type == REDIS_REPLY_NIL) {
@@ -101,7 +109,11 @@ bool StockRepository::increaseStock(long long activityId, int quantity)
 
     std::string key = RedisKeys::stockKey(activityId);
 
-    redisReply* reply = (redisReply*)redisCommand(redis_, "INCRBY %s %d", key.c_str(), quantity);
+    redisReply* reply = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(redisMutex_);
+        reply = (redisReply*)redisCommand(redis_, "INCRBY %s %d", key.c_str(), quantity);
+    }
     if (!reply) return false;
 
     freeReplyObject(reply);
@@ -114,14 +126,17 @@ int StockRepository::executeScript(const std::string& script, long long activity
 
     std::string key = RedisKeys::stockKey(activityId);
 
-    // 执行 Lua 脚本
-    redisReply* reply = (redisReply*)redisCommand(
-        redis_,
-        "EVAL %s 1 %s %d",
-        script.c_str(),
-        key.c_str(),
-        quantity
-    );
+    redisReply* reply = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(redisMutex_);
+        reply = (redisReply*)redisCommand(
+            redis_,
+            "EVAL %s 1 %s %d",
+            script.c_str(),
+            key.c_str(),
+            quantity
+        );
+    }
 
     if (!reply) return -1;
 

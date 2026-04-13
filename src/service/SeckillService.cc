@@ -16,6 +16,7 @@
 #include <hiredis/hiredis.h>
 #include <ctime>
 #include <chrono>
+#include <mutex>
 
 namespace seckill
 {
@@ -26,6 +27,7 @@ struct SeckillService::Impl
     StockService::Ptr stockService;
     OrderService::Ptr orderService;
     redisContext* redis;
+    std::mutex redisMutex;  // Protects Redis operations
 };
 
 SeckillService::SeckillService()
@@ -71,7 +73,11 @@ Result::Ptr SeckillService::executeSeckill(long long activityId, long long userI
         // 2. 检查用户是否已经购买过
         if (pImpl_->redis) {
             std::string buyKey = RedisKeys::userBuyKey(activityId, userId);
-            redisReply* reply = (redisReply*)redisCommand(pImpl_->redis, "EXISTS %s", buyKey.c_str());
+            redisReply* reply = nullptr;
+            {
+                std::lock_guard<std::mutex> lock(pImpl_->redisMutex);
+                reply = (redisReply*)redisCommand(pImpl_->redis, "EXISTS %s", buyKey.c_str());
+            }
             if (reply && reply->type == REDIS_REPLY_INTEGER && reply->integer == 1) {
                 freeReplyObject(reply);
                 return Result::fail(ErrorCode::ERR_PARAM_INVALID, "You have already purchased this item");
@@ -110,7 +116,10 @@ Result::Ptr SeckillService::executeSeckill(long long activityId, long long userI
         // 7. 标记用户已购买
         if (pImpl_->redis) {
             std::string buyKey = RedisKeys::userBuyKey(activityId, userId);
-            redisCommand(pImpl_->redis, "SETEX %s 86400 1", buyKey.c_str());
+            {
+                std::lock_guard<std::mutex> lock(pImpl_->redisMutex);
+                redisCommand(pImpl_->redis, "SETEX %s 86400 1", buyKey.c_str());
+            }
         }
 
         // 8. 返回结果
@@ -145,12 +154,16 @@ bool SeckillService::pushToOrderQueue(const std::string& orderJson)
 {
     if (!pImpl_->redis) return false;
 
-    redisReply* reply = (redisReply*)redisCommand(
-        pImpl_->redis,
-        "LPUSH %s %s",
-        RedisKeys::ordersPendingKey().c_str(),
-        orderJson.c_str()
-    );
+    redisReply* reply = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(pImpl_->redisMutex);
+        reply = (redisReply*)redisCommand(
+            pImpl_->redis,
+            "LPUSH %s %s",
+            RedisKeys::ordersPendingKey().c_str(),
+            orderJson.c_str()
+        );
+    }
 
     if (!reply) return false;
 
