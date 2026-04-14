@@ -28,6 +28,9 @@ public:
     // 创建订单
     bool create(const Order& order);
 
+    // 批量创建订单
+    bool createBatch(const std::vector<Order>& orders);
+
     // 根据ID查询订单
     Order::Ptr findById(long long id);
 

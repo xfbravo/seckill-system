@@ -80,6 +80,33 @@ bool OrderRepository::create(const Order& order)
     return success;
 }
 
+bool OrderRepository::createBatch(const std::vector<Order>& orders)
+{
+    if (!pImpl_->conn || orders.empty()) return false;
+
+    std::stringstream ss;
+    ss << "INSERT INTO seckill_order (order_no, activity_id, user_id, quantity, status) VALUES ";
+    for (size_t i = 0; i < orders.size(); ++i) {
+        if (i > 0) ss << ", ";
+        const auto& order = orders[i];
+        ss << "('" << order.getOrderNo() << "', "
+           << order.getActivityId() << ", "
+           << order.getUserId() << ", "
+           << order.getQuantity() << ", "
+           << order.getStatus() << ")";
+    }
+
+    bool success = false;
+    {
+        std::lock_guard<std::mutex> lock(pImpl_->connMutex);
+        success = (mysql_query(pImpl_->conn, ss.str().c_str()) == 0);
+    }
+    if (!success) {
+        std::cerr << "Batch insert orders failed: " << mysql_error(pImpl_->conn) << std::endl;
+    }
+    return success;
+}
+
 Order::Ptr OrderRepository::findById(long long id)
 {
     if (!pImpl_->conn) return nullptr;
