@@ -9,6 +9,8 @@
 #include <mysql/mysql.h>
 #include <iostream>
 #include <sstream>
+#include <vector>
+#include <mutex>
 
 namespace seckill
 {
@@ -16,6 +18,7 @@ namespace seckill
 struct UserRepository::Impl
 {
     MYSQL* conn = nullptr;
+    std::mutex connMutex;
 };
 
 UserRepository::UserRepository()
@@ -61,27 +64,31 @@ User::Ptr UserRepository::findById(long long id)
     std::stringstream ss;
     ss << "SELECT id, created_at FROM seckill_user WHERE id = " << id;
 
-    if (mysql_query(pImpl_->conn, ss.str().c_str())) {
-        return nullptr;
-    }
+    User::Ptr user;
+    {
+        std::lock_guard<std::mutex> lock(pImpl_->connMutex);
+        if (mysql_query(pImpl_->conn, ss.str().c_str())) {
+            return nullptr;
+        }
 
-    MYSQL_RES* res = mysql_store_result(pImpl_->conn);
-    if (!res || mysql_num_rows(res) == 0) {
-        if (res) mysql_free_result(res);
-        return nullptr;
-    }
+        MYSQL_RES* res = mysql_store_result(pImpl_->conn);
+        if (!res || mysql_num_rows(res) == 0) {
+            if (res) mysql_free_result(res);
+            return nullptr;
+        }
 
-    MYSQL_ROW row = mysql_fetch_row(res);
-    if (!row) {
+        MYSQL_ROW row = mysql_fetch_row(res);
+        if (!row) {
+            mysql_free_result(res);
+            return nullptr;
+        }
+
+        user = std::make_shared<User>();
+        user->setId(atoll(row[0]));
+        user->setCreatedAt(row[1] ? row[1] : "");
+
         mysql_free_result(res);
-        return nullptr;
     }
-
-    auto user = std::make_shared<User>();
-    user->setId(atoll(row[0]));
-    user->setCreatedAt(row[1] ? row[1] : "");
-
-    mysql_free_result(res);
     return user;
 }
 
@@ -89,17 +96,34 @@ bool UserRepository::createIfNotExists(long long id)
 {
     if (!pImpl_->conn) return false;
 
-    // 先查询是否存在
-    auto existing = findById(id);
-    if (existing) {
-        return true; // 已存在
+    // 先查询是否存在（复制findById逻辑避免死锁）
+    {
+        std::stringstream ss;
+        ss << "SELECT id, created_at FROM seckill_user WHERE id = " << id;
+
+        std::lock_guard<std::mutex> lock(pImpl_->connMutex);
+        if (mysql_query(pImpl_->conn, ss.str().c_str())) {
+            return false;
+        }
+
+        MYSQL_RES* res = mysql_store_result(pImpl_->conn);
+        if (res && mysql_num_rows(res) > 0) {
+            mysql_free_result(res);
+            return true; // 已存在
+        }
+        if (res) mysql_free_result(res);
     }
 
     // 创建用户
     std::stringstream ss;
     ss << "INSERT INTO seckill_user (id) VALUES (" << id << ")";
 
-    if (mysql_query(pImpl_->conn, ss.str().c_str())) {
+    bool success = false;
+    {
+        std::lock_guard<std::mutex> lock(pImpl_->connMutex);
+        success = (mysql_query(pImpl_->conn, ss.str().c_str()) == 0);
+    }
+    if (!success) {
         std::cerr << "Create user failed: " << mysql_error(pImpl_->conn) << std::endl;
         return false;
     }
@@ -113,21 +137,24 @@ std::vector<User::Ptr> UserRepository::findAll()
 
     if (!pImpl_->conn) return list;
 
-    if (mysql_query(pImpl_->conn, "SELECT id, created_at FROM seckill_user ORDER BY id")) {
-        return list;
+    {
+        std::lock_guard<std::mutex> lock(pImpl_->connMutex);
+        if (mysql_query(pImpl_->conn, "SELECT id, created_at FROM seckill_user ORDER BY id")) {
+            return list;
+        }
+
+        MYSQL_RES* res = mysql_store_result(pImpl_->conn);
+        if (!res) return list;
+
+        while (MYSQL_ROW row = mysql_fetch_row(res)) {
+            auto user = std::make_shared<User>();
+            user->setId(atoll(row[0]));
+            user->setCreatedAt(row[1] ? row[1] : "");
+            list.push_back(user);
+        }
+
+        mysql_free_result(res);
     }
-
-    MYSQL_RES* res = mysql_store_result(pImpl_->conn);
-    if (!res) return list;
-
-    while (MYSQL_ROW row = mysql_fetch_row(res)) {
-        auto user = std::make_shared<User>();
-        user->setId(atoll(row[0]));
-        user->setCreatedAt(row[1] ? row[1] : "");
-        list.push_back(user);
-    }
-
-    mysql_free_result(res);
     return list;
 }
 

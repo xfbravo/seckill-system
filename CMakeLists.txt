@@ -4,6 +4,10 @@ project(seckill_system)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# AddressSanitizer for debugging memory issues
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+
 # 找依赖包
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(HIREDIS required hiredis)

@@ -12,6 +12,7 @@
 
 #include <memory>
 #include <vector>
+#include <mutex>
 #include "model/Activity.h"
 
 namespace seckill
