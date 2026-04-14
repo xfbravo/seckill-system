@@ -93,4 +93,29 @@ Result::Ptr StockService::increaseStock(long long activityId, int quantity)
     }
 }
 
+Result::Ptr StockService::executeSeckill(long long activityId, long long userId, int quantity,
+                                        const std::string& orderJson)
+{
+    try {
+        int result = pImpl_->stockRepo->executeSeckill(activityId, userId, quantity, orderJson);
+
+        if (result == -2) {
+            return Result::fail(ErrorCode::ERR_PARAM_INVALID, "You have already purchased this item");
+        }
+        if (result == -1) {
+            return Result::fail(ErrorCode::ERR_ACTIVITY_SOLD_OUT, "Stock is sold out");
+        }
+        if (result < 0) {
+            return Result::fail(ErrorCode::ERR_INTERNAL, "Seckill failed");
+        }
+
+        Json::Value data;
+        data["remain_stock"] = result;
+        return Result::success(data);
+    } catch (const std::exception& e) {
+        std::cerr << "executeSeckill exception: " << e.what() << std::endl;
+        return Result::fail(ErrorCode::ERR_INTERNAL, e.what());
+    }
+}
+
 } // namespace seckill

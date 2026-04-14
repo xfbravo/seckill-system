@@ -7,6 +7,8 @@
 
 #include <memory>
 #include <vector>
+#include <unordered_map>
+#include <shared_mutex>
 #include "common/Result.h"
 #include "model/Activity.h"
 
@@ -34,6 +36,9 @@ public:
     Result::Ptr getActivityStock(long long id);
     Result::Ptr checkActivityStatus(long long id);
     Result::Ptr getCountdown(long long id);
+
+    // 获取活动（先查缓存，再查数据库）
+    Activity::Ptr getActivityFromCacheOrDb(long long id);
 
 private:
     struct Impl;

@@ -11,6 +11,8 @@
 #include <ctime>
 #include <sstream>
 #include <iomanip>
+#include <shared_mutex>
+#include <unordered_map>
 
 namespace seckill
 {
@@ -19,6 +21,8 @@ struct ActivityService::Impl
 {
     ActivityRepository::Ptr activityRepo;
     StockRepository::Ptr stockRepo;
+    std::unordered_map<long long, Activity::Ptr> activityCache;
+    std::shared_mutex cacheMutex;
 };
 
 ActivityService::ActivityService()
@@ -31,6 +35,25 @@ ActivityService::ActivityService()
 ActivityService::~ActivityService()
 {
     delete pImpl_;
+}
+
+Activity::Ptr ActivityService::getActivityFromCacheOrDb(long long id)
+{
+    // 先尝试从缓存读取（读锁）
+    {
+        std::shared_lock<std::shared_mutex> readLock(pImpl_->cacheMutex);
+        auto it = pImpl_->activityCache.find(id);
+        if (it != pImpl_->activityCache.end()) {
+            return it->second;
+        }
+    }
+    // 缓存没有，从数据库读取（写锁）
+    auto activity = pImpl_->activityRepo->findById(id);
+    if (activity) {
+        std::unique_lock<std::shared_mutex> writeLock(pImpl_->cacheMutex);
+        pImpl_->activityCache[id] = activity;
+    }
+    return activity;
 }
 
 Result::Ptr ActivityService::createActivity(
@@ -105,7 +128,7 @@ Result::Ptr ActivityService::getActivityList()
 Result::Ptr ActivityService::getActivity(long long id)
 {
     try {
-        auto activity = pImpl_->activityRepo->findById(id);
+        auto activity = getActivityFromCacheOrDb(id);
         if (!activity) {
             return Result::fail(ErrorCode::ERR_ACTIVITY_NOT_FOUND, "Activity not found");
         }
@@ -123,7 +146,7 @@ Result::Ptr ActivityService::getActivity(long long id)
 Result::Ptr ActivityService::getActivityStock(long long id)
 {
     try {
-        auto activity = pImpl_->activityRepo->findById(id);
+        auto activity = getActivityFromCacheOrDb(id);
         if (!activity) {
             return Result::fail(ErrorCode::ERR_ACTIVITY_NOT_FOUND, "Activity not found");
         }
@@ -147,7 +170,7 @@ Result::Ptr ActivityService::getActivityStock(long long id)
 Result::Ptr ActivityService::checkActivityStatus(long long id)
 {
     try {
-        auto activity = pImpl_->activityRepo->findById(id);
+        auto activity = getActivityFromCacheOrDb(id);
         if (!activity) {
             return Result::fail(ErrorCode::ERR_ACTIVITY_NOT_FOUND, "Activity not found");
         }
@@ -184,7 +207,7 @@ Result::Ptr ActivityService::checkActivityStatus(long long id)
 Result::Ptr ActivityService::getCountdown(long long id)
 {
     try {
-        auto activity = pImpl_->activityRepo->findById(id);
+        auto activity = getActivityFromCacheOrDb(id);
         if (!activity) {
             return Result::fail(ErrorCode::ERR_ACTIVITY_NOT_FOUND, "Activity not found");
         }

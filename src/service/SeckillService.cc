@@ -8,15 +8,11 @@
 #include "service/ActivityService.h"
 #include "service/OrderService.h"
 #include "common/ErrorCode.h"
-#include "common/RedisKeys.h"
-#include "common/Config.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
-#include <hiredis/hiredis.h>
 #include <ctime>
 #include <chrono>
-#include <mutex>
 
 namespace seckill
 {
@@ -26,8 +22,6 @@ struct SeckillService::Impl
     ActivityService::Ptr activityService;
     StockService::Ptr stockService;
     OrderService::Ptr orderService;
-    redisContext* redis;
-    std::mutex redisMutex;  // Protects Redis operations
 };
 
 SeckillService::SeckillService()
@@ -36,22 +30,10 @@ SeckillService::SeckillService()
     pImpl_->activityService = std::make_shared<ActivityService>();
     pImpl_->stockService = std::make_shared<StockService>();
     pImpl_->orderService = std::make_shared<OrderService>();
-
-    Config& cfg = Config::instance();
-    pImpl_->redis = redisConnect(cfg.redisHost().c_str(), cfg.redisPort());
-    if (pImpl_->redis && pImpl_->redis->err) {
-        std::cerr << "Redis connection error: " << pImpl_->redis->errstr << std::endl;
-        redisFree(pImpl_->redis);
-        pImpl_->redis = nullptr;
-    }
 }
 
 SeckillService::~SeckillService()
 {
-    if (pImpl_->redis) {
-        redisFree(pImpl_->redis);
-        pImpl_->redis = nullptr;
-    }
     delete pImpl_;
 }
 
@@ -70,63 +52,32 @@ Result::Ptr SeckillService::executeSeckill(long long activityId, long long userI
             return Result::fail(ErrorCode::ERR_ACTIVITY_ENDED, "Activity has ended");
         }
 
-        // 2. 检查用户是否已经购买过
-        if (pImpl_->redis) {
-            std::string buyKey = RedisKeys::userBuyKey(activityId, userId);
-            redisReply* reply = nullptr;
-            {
-                std::lock_guard<std::mutex> lock(pImpl_->redisMutex);
-                reply = (redisReply*)redisCommand(pImpl_->redis, "EXISTS %s", buyKey.c_str());
-            }
-            if (reply && reply->type == REDIS_REPLY_INTEGER && reply->integer == 1) {
-                freeReplyObject(reply);
-                return Result::fail(ErrorCode::ERR_PARAM_INVALID, "You have already purchased this item");
-            }
-            if (reply) freeReplyObject(reply);
-        }
-
-        // 3. 原子扣减库存
-        auto decreaseResult = pImpl_->stockService->decreaseStock(activityId, quantity);
-        if (decreaseResult->code() != 0) {
-            return Result::fail(ErrorCode::ERR_ACTIVITY_SOLD_OUT, "Stock is sold out");
-        }
-
-        // 4. 生成订单号
+        // 2. 生成订单号
         std::string orderNo = generateOrderNo(activityId, userId);
 
-        // 5. 创建订单 JSON
+        // 3. 创建订单 JSON
         Json::Value orderJson;
         orderJson["order_no"] = orderNo;
         orderJson["activity_id"] = (int64_t)activityId;
         orderJson["user_id"] = (int64_t)userId;
         orderJson["quantity"] = quantity;
         orderJson["status"] = 0;
-        orderJson["remain_stock"] = decreaseResult->data()["remain_stock"]; // 扣减后的库存
 
-        // 6. 写入订单队列
         Json::StreamWriterBuilder builder;
         builder["indentation"] = "";
         std::string orderStr = Json::writeString(builder, orderJson);
 
-        if (!pushToOrderQueue(orderStr)) {
-            pImpl_->stockService->increaseStock(activityId, quantity);
-            return Result::fail(ErrorCode::ERR_ORDER_CREATE_FAIL, "Failed to create order");
+        // 4. 原子执行：检查用户 + 扣库存 + 写队列 + 标记用户
+        auto result = pImpl_->stockService->executeSeckill(activityId, userId, quantity, orderStr);
+        if (result->code() != 0) {
+            return result;
         }
 
-        // 7. 标记用户已购买
-        if (pImpl_->redis) {
-            std::string buyKey = RedisKeys::userBuyKey(activityId, userId);
-            {
-                std::lock_guard<std::mutex> lock(pImpl_->redisMutex);
-                redisCommand(pImpl_->redis, "SETEX %s 86400 1", buyKey.c_str());
-            }
-        }
-
-        // 8. 返回结果
+        // 5. 返回结果
         Json::Value data;
         data["order_no"] = orderNo;
         data["status"] = "pending";
-        data["remain_stock"] = decreaseResult->data()["remain_stock"];
+        data["remain_stock"] = result->data()["remain_stock"];
 
         return Result::success("Seckill successful, order is being processed", data);
 
@@ -148,28 +99,6 @@ int SeckillService::checkActivityStatus(long long activityId)
         return -1;
     }
     return result->data()["status"].asInt();
-}
-
-bool SeckillService::pushToOrderQueue(const std::string& orderJson)
-{
-    if (!pImpl_->redis) return false;
-
-    redisReply* reply = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(pImpl_->redisMutex);
-        reply = (redisReply*)redisCommand(
-            pImpl_->redis,
-            "LPUSH %s %s",
-            RedisKeys::ordersPendingKey().c_str(),
-            orderJson.c_str()
-        );
-    }
-
-    if (!reply) return false;
-
-    bool success = (reply->type == REDIS_REPLY_INTEGER && reply->integer > 0);
-    freeReplyObject(reply);
-    return success;
 }
 
 std::string SeckillService::generateOrderNo(long long activityId, long long userId)

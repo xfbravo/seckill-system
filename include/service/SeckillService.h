@@ -25,7 +25,6 @@ public:
 
 private:
     int checkActivityStatus(long long activityId);
-    bool pushToOrderQueue(const std::string& orderJson);
     std::string generateOrderNo(long long activityId, long long userId);
 
     struct Impl;

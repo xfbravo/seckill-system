@@ -13,7 +13,7 @@
 #include <memory>
 #include <string>
 #include <hiredis/hiredis.h>
-#include <mutex>
+#include "common/RedisPool.h"
 
 namespace seckill
 {
@@ -27,41 +27,29 @@ public:
     ~StockRepository();
 
     // 初始化库存
-    // @param activityId 活动ID
-    // @param stock 库存数量
-    // @return 成功返回 true
     bool initStock(long long activityId, int stock);
 
-    // 扣减库存 (原子操作)
-    // @param activityId 活动ID
-    // @param quantity 购买数量
-    // @return 成功返回剩余库存，失败返回 -1
+    // 扣减库存
     int decreaseStock(long long activityId, int quantity);
 
     // 查询库存
-    // @param activityId 活动ID
-    // @return 库存数量，失败返回 -1
     int getStock(long long activityId);
 
-    // 回补库存 (用于取消订单等情况)
-    // @param activityId 活动ID
-    // @param quantity 回补数量
-    // @return 成功返回 true
+    // 回补库存
     bool increaseStock(long long activityId, int quantity);
 
+    // 原子秒杀操作：检查用户 + 扣减库存 + 写入队列 + 标记用户已购买
+    int executeSeckill(long long activityId, long long userId, int quantity,
+                       const std::string& orderJson, int buyExpireSec = 86400);
+
 private:
-    // Redis 连接
-    redisContext* redis_;
-    std::mutex redisMutex_;  // Protects Redis operations
-
-    // Lua 脚本：扣减库存
-    // 逻辑：如果库存 >= 购买数量，则扣减成功
-    // KEYS[1] = stock:{activity_id}
-    // ARGV[1] = quantity
-    static const char* DECREASE_STOCK_SCRIPT;
-
-    // 执行 Lua 脚本
     int executeScript(const std::string& script, long long activityId, int quantity);
+    int executeSeckillScript(const std::string& script, long long activityId,
+                            long long userId, int quantity, const std::string& orderJson,
+                            int buyExpireSec);
+
+    RedisPool::Ptr redisPool_;
+    static const char* DECREASE_STOCK_SCRIPT;
 };
 
 } // namespace seckill
