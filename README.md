@@ -6,7 +6,7 @@
 
 ### 1. 启动 MySQL 和 Redis
 
-确保 MySQL (10.195.242.150:3306) 和 Redis 服务运行中。
+确保 MySQL (your IP : port) 和 Redis 服务运行中。
 
 ### 2. 启动后端服务器
 
